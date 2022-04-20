@@ -1,22 +1,14 @@
 package com.tzw.flutter_kpay;
-import androidx.annotation.NonNull;
-
-import io.flutter.embedding.engine.FlutterEngine;
-import io.flutter.plugin.common.MethodChannel;
-import io.flutter.embedding.android.FlutterActivity;
-
-import android.content.ContextWrapper;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.BatteryManager;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
-import android.os.Bundle;
-
-import io.flutter.plugin.common.EventChannel;
 
 import android.app.Activity;
-
+import androidx.annotation.NonNull;
+import io.flutter.embedding.engine.FlutterEngine;
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.plugin.common.MethodCall;
+import io.flutter.plugin.common.MethodChannel;
+import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
+import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.EventChannel;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
@@ -26,7 +18,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import com.kbzbank.payment.KBZPay;
 
 import org.json.JSONException;
@@ -38,7 +30,15 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.HashMap;
 
-public class FlutterKpayPlugin extends FlutterActivity {
+/** UntitledPlugin */
+public class FlutterKpayPlugin implements FlutterPlugin, MethodCallHandler {
+    /// The MethodChannel that will the communication between Flutter and native
+    /// Android
+    ///
+    /// This local reference serves to register the plugin with the Flutter Engine
+    /// and unregister it
+    /// when the Flutter Engine is detached from the Activity
+    private MethodChannel channel;
     private static final String CHANNEL = "flutter_kpay";
     private static EventChannel.EventSink sink;
     private static final String TAG = "kpay";
@@ -48,72 +48,18 @@ public class FlutterKpayPlugin extends FlutterActivity {
     private String mSignKey = "";
     private String mSign = "";
     private String mSignType = "SHA256";
-    private String mTitle="";
-    private String mAmount="0";
+    private String mTitle = "";
+    private String mAmount = "0";
     private String mPrepayId = "";
     private String mMerchantOrderId = "";
+    private Activity activity;
 
     @Override
-    public void configureFlutterEngine(@NonNull FlutterEngine flutterEngine) {
-        super.configureFlutterEngine(flutterEngine);
-        new MethodChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), CHANNEL)
-                .setMethodCallHandler(
-                        (call, result) -> {
-
-                            if (call.method.equals("createPay")) {
-                                HashMap<String, Object> map = call.arguments();
-                                try {
-                                    JSONObject params = new JSONObject(map);
-                                    Log.v("createPay", params.toString());
-                                    if (params.has("merch_code") && params.has("appid") && params.has("sign_key")) {
-                                        mMerchantCode = params.getString("merch_code");
-                                        mAppId = params.getString("appid");
-                                        mSignKey = params.getString("sign_key");
-                                        mAmount = params.getString("amount");
-                                        mTitle = params.getString("title");
-                                        mMerchantOrderId = params.getString("order_id");
-                                        String createOrderString = createOrder();
-
-                                        result.success(createOrderString);
-
-                                    }
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                    return;
-                                }
-                            } else if (call.method.equals("startPay")) {
-                                Log.d(TAG, "call");
-                                HashMap<String, Object> map = call.arguments();
-                                try {
-                                    JSONObject params = new JSONObject(map);
-                                    Log.v("startPay", params.toString());
-                                    if (params.has("prepay_id") && params.has("merch_code") && params.has("appid") && params.has("sign_key")) {
-                                        String prepayId = null;
-                                        String merch_code = null;
-                                        String appid = null;
-                                        String sign_key = null;
-                                        prepayId = params.getString("prepay_id");
-                                        merch_code = params.getString("merch_code");
-                                        appid = params.getString("appid");
-                                        sign_key = params.getString("sign_key");
-                                        mPrepayId = prepayId;
-                                        startPay();
-                                        result.success("payStatus " + 0);
-                                    } else {
-                                        result.error("parameter error", "parameter error", null);
-                                    }
-                                } catch (JSONException e) {
-                                    e.printStackTrace();
-                                    return;
-                                }
-                            } else {
-                                result.notImplemented();
-                            }
-                        }
-
-
-                );
-        final EventChannel eventchannel = new EventChannel(flutterEngine.getDartExecutor().getBinaryMessenger(), "flutter_kpay/pay_status");
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
+        channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), CHANNEL);
+        channel.setMethodCallHandler(this);
+        final EventChannel eventchannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(),
+                "flutter_kpay/pay_status");
         eventchannel.setStreamHandler(new EventChannel.StreamHandler() {
             @Override
             public void onListen(Object o, EventChannel.EventSink eventSink) {
@@ -126,6 +72,71 @@ public class FlutterKpayPlugin extends FlutterActivity {
             }
         });
 
+    }
+
+    public void onAttachedToActivity(ActivityPluginBinding activityPluginBinding) {
+        // TODO: your plugin is now attached to an Activity
+        this.activity = activityPluginBinding.getActivity();
+    }
+
+    @Override
+    public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+        if (call.method.equals("createPay")) {
+            HashMap<String, Object> map = call.arguments();
+            try {
+                JSONObject params = new JSONObject(map);
+                Log.v("createPay", params.toString());
+                if (params.has("merch_code") && params.has("appid") && params.has("sign_key")) {
+                    mMerchantCode = params.getString("merch_code");
+                    mAppId = params.getString("appid");
+                    mSignKey = params.getString("sign_key");
+                    mAmount = params.getString("amount");
+                    mTitle = params.getString("title");
+                    mMerchantOrderId = params.getString("order_id");
+                    String createOrderString = createOrder();
+
+                    result.success(createOrderString);
+
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
+            }
+        } else if (call.method.equals("startPay")) {
+            Log.d(TAG, "call");
+            HashMap<String, Object> map = call.arguments();
+            try {
+                JSONObject params = new JSONObject(map);
+                Log.v("startPay", params.toString());
+                if (params.has("prepay_id") && params.has("merch_code") && params.has("appid")
+                        && params.has("sign_key")) {
+                    String prepayId = null;
+                    String merch_code = null;
+                    String appid = null;
+                    String sign_key = null;
+                    prepayId = params.getString("prepay_id");
+                    merch_code = params.getString("merch_code");
+                    appid = params.getString("appid");
+                    sign_key = params.getString("sign_key");
+                    mPrepayId = prepayId;
+                    startPay();
+                    result.success("payStatus " + 0);
+                } else {
+                    result.error("parameter error", "parameter error", null);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return;
+            }
+        } else {
+            result.notImplemented();
+        }
+
+    }
+
+    @Override
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        channel.setMethodCallHandler(null);
     }
 
     public static void SetSink(EventChannel.EventSink eventSink) {
@@ -147,7 +158,7 @@ public class FlutterKpayPlugin extends FlutterActivity {
         buildOrderInfo();
         Log.d(TAG, mOrderInfo);
         Log.d(TAG, mSign);
-        KBZPay.startPay(MainActivity.this, mOrderInfo, mSign, mSignType);
+        KBZPay.startPay(this.activity, mOrderInfo, mSign, mSignType);
     }
 
     /**
@@ -157,14 +168,14 @@ public class FlutterKpayPlugin extends FlutterActivity {
         Date d = new Date();
         SimpleDateFormat format = new SimpleDateFormat("yyyyMMdd", Locale.getDefault());
         String today = format.format(d) + Integer.parseInt("" + d.getTime() / 1000);
-        //mMerchantOrderId = today;
+        // mMerchantOrderId = today;
         String json = "";
         try {
             // Order increase
             try {
                 Long orderid = Long.parseLong(mMerchantOrderId);
-                //orderid++;
-                //mMerchantOrderId = "" + orderid;
+                // orderid++;
+                // mMerchantOrderId = "" + orderid;
             } catch (Exception ex) {
                 Log.d(TAG, ex.toString());
             }
@@ -189,14 +200,14 @@ public class FlutterKpayPlugin extends FlutterActivity {
             jsonContent.put("appid", mAppId);
             jsonContent.put("trade_type", "APP");
             jsonContent.put("title", mTitle);
-            jsonContent.put("total_amount",mAmount);
+            jsonContent.put("total_amount", mAmount);
             jsonContent.put("trans_currency", "MMK");
             jsonContent.put("timeout_express", "100m");
             jsonContent.put("callback_info", "iphonex");
             json = jsonObject.toString();
             return json;
         } catch (JSONException jex) {
-            showNotice("json params error" + jex.toString());
+            // showNotice("json params error" + jex.toString());
             return "";
         }
     }
@@ -217,7 +228,7 @@ public class FlutterKpayPlugin extends FlutterActivity {
                 "&notify_url=" + notifyUrl +
                 "&timeout_express=100m" +
                 "&timestamp=" + timestamp +
-                "&title=" +mTitle+
+                "&title=" + mTitle +
                 "&total_amount=" + mAmount +
                 "&trade_type=APP" +
                 "&trans_currency=MMK" +
@@ -228,8 +239,8 @@ public class FlutterKpayPlugin extends FlutterActivity {
     }
 
     // /**
-    //  * order info please create in server side. this function just a demo.
-    //  */
+    // * order info please create in server side. this function just a demo.
+    // */
     private void buildOrderInfo() {
         // prepayId由服务器下单得到
         String prepayId = mPrepayId;
@@ -256,7 +267,7 @@ public class FlutterKpayPlugin extends FlutterActivity {
         return Integer.toString(d.intValue());
     }
 
-    private void showNotice(String msg) {
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
-    }
+    // private void showNotice(String msg) {
+    // Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
+    // }
 }
