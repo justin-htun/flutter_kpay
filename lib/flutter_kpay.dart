@@ -16,7 +16,7 @@ class FlutterKPay {
     return _streamPayStatus!;
   }
 
-  static Future<String> createOrder(
+  static Future<String> startPay(
       {required String merchCode,
       required String appId,
       required String signKey,

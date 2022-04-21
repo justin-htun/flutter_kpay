@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
-
-import 'package:flutter/services.dart';
 import 'package:flutter_kpay/flutter_kpay.dart';
 
 void main() {
@@ -33,7 +30,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   void startPay() {
-    FlutterKPay.createOrder(
+    FlutterKPay.startPay(
             merchCode: "10000",
             appId: "kp4c1706c8675a45fghjklrskyf",
             signKey: "123",

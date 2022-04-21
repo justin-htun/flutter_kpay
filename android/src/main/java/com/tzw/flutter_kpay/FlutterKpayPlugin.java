@@ -20,7 +20,7 @@ import android.widget.EditText;
 import android.widget.Toast;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import com.kbzbank.payment.KBZPay;
-
+import io.flutter.plugin.common.PluginRegistry.Registrar;
 import org.json.JSONException;
 import org.json.JSONObject;
 
