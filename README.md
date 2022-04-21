@@ -23,16 +23,6 @@ android/app/src/main/manifest.xml
 	<activity android:name="com.kbzbank.payment.sdk.callback.CallbackResultActivity" android:theme="@android:style/Theme.NoDisplay" android:exported="true"
 ....
 ```
-### IOS
-App project configuration in the Info. Add kbzpay pist white list
-ios/Runner/Info.plist
-```plist
-<key>LSApplicationQueriesSchemes</key>
-	<array>
-		<string>kbzpay</string>
-	</array>
-```
-
 
 ## Example
 ```dart
