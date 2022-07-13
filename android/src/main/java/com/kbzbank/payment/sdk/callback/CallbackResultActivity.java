@@ -4,7 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
-import com.tzw.flutter_kpay.FlutterKPayPlugin;
+import com.tzw.flutter_kpay.FlutterKpayPlugin;
 
 import com.kbzbank.payment.KBZPay;
 
@@ -18,12 +18,12 @@ public class CallbackResultActivity extends Activity {
         if (result == KBZPay.COMPLETED) {
             Log.d("KBZPay", "pay success!");
             String orderId = intent.getStringExtra(KBZPay.EXTRA_ORDER_ID);
-            FlutterKPayPlugin.sendPayStatus(result, orderId);
+            FlutterKpayPlugin.sendPayStatus(result, orderId);
         } else {
             String failMsg = intent.getStringExtra(KBZPay.EXTRA_FAIL_MSG);
             Log.d("KBZPay", "pay fail, fail reason = " + failMsg);
             String orderId = intent.getStringExtra(KBZPay.EXTRA_ORDER_ID);
-            FlutterKPayPlugin.sendPayStatus(result, orderId);
+            FlutterKpayPlugin.sendPayStatus(result, orderId);
         }
     }
 }
